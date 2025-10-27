@@ -1,0 +1,70 @@
+name: Proactive Forward Merge
+
+on:
+  push:
+    branches:
+      - release-9.5.1
+      - release-9.5.1.1
+      - release-9.6.0
+
+jobs:
+  forward-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # fetch all commits for comparison
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine downstream branches
+        id: targets
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $BRANCH"
+
+          if [[ "$BRANCH" == "release-9.5.1" ]]; then
+            TARGETS="release-9.5.1.1 release-9.6.0 develop"
+          elif [[ "$BRANCH" == "release-9.5.1.1" ]]; then
+            TARGETS="release-9.6.0 develop"
+          elif [[ "$BRANCH" == "release-9.6.0" ]]; then
+            TARGETS="develop"
+          else
+            TARGETS=""
+          fi
+
+          echo "targets=$TARGETS" >> $GITHUB_OUTPUT
+
+      - name: Forward merge missing commits
+        run: |
+          for TARGET in ${{ steps.targets.outputs.targets }}; do
+            echo "Checking forward merge for $TARGET"
+            git fetch origin $TARGET
+
+            # Check if TARGET is missing commits from BRANCH
+            MISSING=$(git log origin/$TARGET..$BRANCH --oneline)
+            if [ -n "$MISSING" ]; then
+              echo "Branch $TARGET is missing commits from $BRANCH. Creating forward merge PR."
+
+              # Create a temporary branch for forward merge
+              MERGE_BRANCH="forward-merge-${BRANCH}-to-${TARGET}"
+              git checkout -B $MERGE_BRANCH
+              git merge --no-ff origin/$BRANCH -m "Forward merge from $BRANCH to $TARGET"
+              git push origin $MERGE_BRANCH --force
+
+              # Create PR using GitHub CLI
+              gh pr create \
+                --title "Forward merge from $BRANCH to $TARGET" \
+                --body "Automatically generated PR to forward merge commits from $BRANCH into $TARGET." \
+                --base $TARGET \
+                --head $MERGE_BRANCH \
+                --label "automated-forward-merge" \
+                --reviewer "@org/team" || echo "PR already exists or failed"
+            else
+              echo "Branch $TARGET is already up-to-date."
+            fi
+          done
