@@ -1,0 +1,26 @@
+name: Test Workflow
+
+on:
+  push:
+    branches:
+      - develop  # Or any branch you want to test
+
+jobs:
+  test-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print OS and environment
+        run: |
+          echo "Hello! GitHub Actions is working."
+          echo "Running on:"
+          uname -a
+          lsb_release -a
+          echo "Git version:"
+          git --version
+          echo "Node version (if installed):"
+          node --version || echo "Node not installed"
+          echo "Python version:"
+          python3 --version || echo "Python3 not installed"
