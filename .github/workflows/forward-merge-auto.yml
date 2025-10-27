@@ -3,9 +3,9 @@ name: Proactive Forward Merge
 on:
   push:
     branches:
-      - 'release-9.5.1'
-      - 'release-9.5.1.1'
-      - 'release-9.6.0'
+      - release-9.5.1
+      - release-9.5.1.1
+      - release-9.6.0
 
 jobs:
   forward-merge:
