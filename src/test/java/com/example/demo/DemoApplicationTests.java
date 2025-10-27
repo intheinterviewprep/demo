@@ -8,6 +8,7 @@ class DemoApplicationTests {
 
 	@Test
 	void contextLoads() {
+		System.out.println("push into release-9.6.0 without forward merging release-9.5.1");
 	}
 
 }
